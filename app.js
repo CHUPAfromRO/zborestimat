@@ -13,9 +13,6 @@ const bigCities = {
 "Cluj-Napoca":[46.7712,23.6236],
 "Iași":[47.1585,27.6014],
 "Timișoara":[45.7489,21.2087],
-"Constanța":[44.1598,28.6348],
-"Craiova":[44.3302,23.7949],
-"Galați":[45.4353,28.007],
 "Oradea":[47.0465,21.9189],
 "Sibiu":[45.7983,24.1256]
 }
@@ -23,7 +20,7 @@ const bigCities = {
 const valeaOltuluiRoute = [
 [45.252,24.317], // Caineni
 [45.143,24.674], // Curtea de Arges
-[44.980,26.020], //VOR FLORESTI
+
 ]
 
 let start = cities["Târgu Mureș"]
