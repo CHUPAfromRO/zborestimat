@@ -37,4 +37,17 @@ font-size:18px;
 height:500px;
 margin:20px;
 border-radius:10px;
+.row{
+display:flex;
+gap:20px;
 }
+
+.destination-row{
+margin-top:15px;
+}
+
+.resultbox{
+display:flex;
+flex-direction:column;
+justify-content:end;
+}}
