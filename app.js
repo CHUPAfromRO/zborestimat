@@ -114,6 +114,7 @@ function showSuggestions(city, results, departure) {
     const locationName = `${city} (${countyCode})`
 
     const div = document.createElement("div")
+    div.className = "suggestion-item"
     div.textContent = locationName
     div.onclick = () => {
       document.getElementById("destination").value = locationName
@@ -124,6 +125,7 @@ function showSuggestions(city, results, departure) {
     container.appendChild(div)
   })
 }
+
 function resolveRoute(dest, locationName, departure) {
   const points = [start, dest]
   const distance = routeDistance(points)
