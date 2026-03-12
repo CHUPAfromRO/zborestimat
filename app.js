@@ -103,29 +103,20 @@ parseFloat(data[0].lat),
 parseFloat(data[0].lon)
 ]
 
-let points=[start]
+let points=[start,dest]
 
-// ruta Valea Oltului catre Bucuresti
-const plecariValeaOltului = [
-"Târgu Mureș",
-"Jibou",
-"Arad"
-]
+// calcul distanta normala
+let distance=routeDistance(points)
 
+let time=(distance/speed)*60
+
+// regula speciala Targu Mures -> Bucuresti
 if(
+departure==="Târgu Mureș" &&
 city.toLowerCase().includes("bucure")
-&& plecariValeaOltului.includes(departure)
 ){
-
-valeaOltuluiRoute.forEach(p=>points.push(p))
-
+time=100
 }
-
-points.push(dest)
-
-const distance=routeDistance(points)
-
-const time=(distance/speed)*60
 
 document.getElementById("distance")
 .innerText=distance.toFixed(1)
