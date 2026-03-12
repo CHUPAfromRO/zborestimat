@@ -17,12 +17,6 @@ const bigCities = {
 "Sibiu":[45.7983,24.1256]
 }
 
-const valeaOltuluiRoute = [
-[45.522,24.327], // Caineni
-[45.140,24.668], // Curtea de Arges
-[44.510,25.693]  // Floresti VOR/DME
-]
-
 let start = cities["Târgu Mureș"]
 
 const map = L.map('map').setView(start,7)
@@ -34,7 +28,7 @@ L.tileLayer(
 
 let route
 
-// afisare orase mari pe harta
+// marcatori pentru orașe mari
 Object.entries(bigCities).forEach(city=>{
 L.marker(city[1])
 .addTo(map)
@@ -105,12 +99,10 @@ parseFloat(data[0].lon)
 
 let points=[start,dest]
 
-// calcul distanta normala
 let distance=routeDistance(points)
-
 let time=(distance/speed)*60
 
-// regula speciala Targu Mures -> Bucuresti
+// regula specială
 if(
 departure==="Târgu Mureș" &&
 city.toLowerCase().includes("bucure")
