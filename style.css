@@ -60,16 +60,23 @@ height:500px;
 margin:20px;
 border-radius:10px;
 }
-#suggestions button{
-width:auto;
-margin-top:0;
-padding:6px 12px;
-font-size:14px;
+#suggestions{
+position:absolute;
+top:100%;
+left:0;
+right:0;
 background:white;
-color:#2c7be5;
-border:1px solid #2c7be5;
-border-radius:5px;
+border:1px solid #ccc;
+border-radius:4px;
+z-index:1000;
+box-shadow:0 4px 8px rgba(0,0,0,0.1);
 }
-#suggestions button:hover{
+#suggestions div{
+padding:8px;
+cursor:pointer;
+font-size:15px;
+}
+#suggestions div:hover{
 background:#e8f0fc;
+color:#2c7be5;
 }
