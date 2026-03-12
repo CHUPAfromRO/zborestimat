@@ -20,7 +20,7 @@ const bigCities = {
 const valeaOltuluiRoute = [
 [45.252,24.317], // Caineni
 [45.143,24.674], // Curtea de Arges
-
+[44.980,26.020]  // Floresti VOR/DME
 ]
 
 let start = cities["Târgu Mureș"]
