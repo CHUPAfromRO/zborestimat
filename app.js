@@ -8,13 +8,23 @@ const cities = {
 "Brașov":[45.6579,25.6012]
 }
 
-
-const waypoints = {
-"București":[
-[45.252,24.317], // Caineni
-[45.143,24.674]  // Curtea de Arges
-]
+const bigCities = {
+"București":[44.4268,26.1025],
+"Cluj-Napoca":[46.7712,23.6236],
+"Iași":[47.1585,27.6014],
+"Timișoara":[45.7489,21.2087],
+"Constanța":[44.1598,28.6348],
+"Craiova":[44.3302,23.7949],
+"Galați":[45.4353,28.007],
+"Oradea":[47.0465,21.9189],
+"Sibiu":[45.7983,24.1256]
 }
+
+const valeaOltuluiRoute = [
+[45.252,24.317], // Caineni
+[45.143,24.674], // Curtea de Arges
+[44.212,25.744]  // Floresti Giurgiu
+]
 
 let start = cities["Târgu Mureș"]
 
@@ -27,6 +37,7 @@ L.tileLayer(
 
 let route
 
+// afisare orase mari pe harta
 Object.entries(bigCities).forEach(city=>{
 L.marker(city[1])
 .addTo(map)
@@ -76,30 +87,40 @@ document.getElementById("departure").value
 
 start=cities[departure]
 
-const city=
+const city =
 document.getElementById("destination").value
 
-const url=
+const url =
 `https://nominatim.openstreetmap.org/search?format=json&q=${city},Romania`
 
-const res=await fetch(url)
-const data=await res.json()
+const res = await fetch(url)
+const data = await res.json()
 
 if(data.length===0){
 alert("Localitate negăsită")
 return
 }
 
-const dest=[
+const dest = [
 parseFloat(data[0].lat),
 parseFloat(data[0].lon)
 ]
 
 let points=[start]
 
-if(waypoints[city]){
+// ruta Valea Oltului catre Bucuresti
+const plecariValeaOltului = [
+"Târgu Mureș",
+"Jibou",
+"Arad"
+]
 
-waypoints[city].forEach(p=>points.push(p))
+if(
+city.toLowerCase().includes("bucure")
+&& plecariValeaOltului.includes(departure)
+){
+
+valeaOltuluiRoute.forEach(p=>points.push(p))
 
 }
 
@@ -117,7 +138,10 @@ document.getElementById("time")
 
 if(route) map.removeLayer(route)
 
-route=L.polyline(points,{color:"red"}).addTo(map)
+route=L.polyline(points,{
+color:"red",
+weight:4
+}).addTo(map)
 
 map.fitBounds(route.getBounds())
 
