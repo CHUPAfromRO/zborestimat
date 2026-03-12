@@ -12,15 +12,17 @@ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
 />
 
 </head>
+
 <body>
 
-<h1>Flight Time Estimator</h1>
 <h1>Calculator estimă de zbor</h1>
 
 <div class="panel">
 
+<div class="row">
+
+<div>
 <label>Plecare</label>
-<input value="Târgu Mureș" disabled>
 <select id="departure">
 <option>Târgu Mureș</option>
 <option>Jibou</option>
@@ -28,16 +30,25 @@ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
 <option>Arad</option>
 <option>Brașov</option>
 </select>
+</div>
+
+<div class="resultbox">
+<label>Timp zbor</label>
+<p><span id="time">-</span> min</p>
+</div>
+
+</div>
+
+<div class="destination-row">
 
 <label>Destinație</label>
-<input id="destination" placeholder="Ex: Iași">
+<input id="destination" placeholder="Ex: București">
+
+</div>
 
 <button onclick="calculate()">Calculează</button>
 
-<div class="result">
 <p>Distanță: <span id="distance">-</span> NM</p>
-<p>Timp zbor: <span id="time">-</span> min</p>
-</div>
 
 </div>
 
@@ -45,10 +56,6 @@ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="app.js"></script>
-
-</body>
-</html>
-
 
 </body>
 </html>
