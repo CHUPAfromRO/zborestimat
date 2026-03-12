@@ -111,18 +111,19 @@ function showSuggestions(city, results, departure) {
       ?.trim()
 
     const countyCode = countyAbbr[county] || county
+    const locationName = `${city} (${countyCode})`
 
-    const btn = document.createElement("button")
-    btn.textContent = `${city} (${countyCode})`
-    btn.onclick = () => {
+    const div = document.createElement("div")
+    div.textContent = locationName
+    div.onclick = () => {
+      document.getElementById("destination").value = locationName
       container.innerHTML = ""
       const dest = [parseFloat(item.lat), parseFloat(item.lon)]
-      resolveRoute(dest, `${city} (${countyCode})`, departure)
+      resolveRoute(dest, locationName, departure)
     }
-    container.appendChild(btn)
+    container.appendChild(div)
   })
 }
-
 function resolveRoute(dest, locationName, departure) {
   const points = [start, dest]
   const distance = routeDistance(points)
