@@ -25,6 +25,7 @@ const waypoints = {
 "București":[
 [45.252,24.317], // Caineni
 [45.143,24.674]  // Curtea de Arges
+[44.212,25.744]  // Floresti Giurgiu
 ]
 }
 
