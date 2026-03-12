@@ -70,32 +70,65 @@ async function calculate() {
 
   if (city.toLowerCase().includes("bucure")) {
     dest = [44.4268, 26.1025]
-  } else {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(city)},Romania`
-    const res = await fetch(url)
-    const data = await res.json()
-
-    if (data.length === 0) {
-      alert("Localitate negăsită")
-      return
-    }
-
-    dest = [parseFloat(data[0].lat), parseFloat(data[0].lon)]
-
-    if (data.length > 1) {
-      const county = data[0].address?.county
-        ?.replace(/\s*Județ\s*/i, "")
-        ?.replace(/\s*County\s*/i, "")
-        ?.trim()
-      if (county) locationName = `${city} (${county})`
-    }
+    resolveRoute(dest, locationName, departure)
+    return
   }
 
+  const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&q=${encodeURIComponent(city)},Romania`
+  const res = await fetch(url)
+  const data = await res.json()
+
+  if (data.length === 0) {
+    alert("Localitate negăsită")
+    return
+  }
+
+  const uniqueCounties = [...new Map(data.map(item => {
+    const county = item.address?.county
+      ?.replace(/\s*Județ\s*/i, "")
+      ?.replace(/\s*County\s*/i, "")
+      ?.trim()
+    return [county, item]
+  })).values()]
+
+  if (uniqueCounties.length > 1) {
+    showSuggestions(city, uniqueCounties, departure)
+    return
+  }
+
+  dest = [parseFloat(data[0].lat), parseFloat(data[0].lon)]
+  resolveRoute(dest, locationName, departure)
+}
+
+function showSuggestions(city, results, departure) {
+  const container = document.getElementById("suggestions")
+  container.innerHTML = ""
+
+  results.forEach(item => {
+    const county = item.address?.county
+      ?.replace(/\s*Județ\s*/i, "")
+      ?.replace(/\s*County\s*/i, "")
+      ?.trim()
+
+    const countyCode = countyAbbr[county] || county
+
+    const btn = document.createElement("button")
+    btn.textContent = `${city} (${countyCode})`
+    btn.onclick = () => {
+      container.innerHTML = ""
+      const dest = [parseFloat(item.lat), parseFloat(item.lon)]
+      resolveRoute(dest, `${city} (${countyCode})`, departure)
+    }
+    container.appendChild(btn)
+  })
+}
+
+function resolveRoute(dest, locationName, departure) {
   const points = [start, dest]
   const distance = routeDistance(points)
   let time = (distance / speed) * 60
 
-  if (departure.includes("Târgu Mure") && city.toLowerCase().includes("bucure")) {
+  if (departure.includes("Mure") && locationName.toLowerCase().includes("bucure")) {
     time = 100
   }
 
@@ -113,4 +146,18 @@ async function calculate() {
   }).addTo(map)
 
   map.fitBounds(route.getBounds())
+}
+
+const countyAbbr = {
+  "Alba": "AB", "Arad": "AR", "Argeș": "AG", "Bacău": "BC",
+  "Bihor": "BH", "Bistrița-Năsăud": "BN", "Botoșani": "BT",
+  "Brăila": "BR", "Brașov": "BV", "Buzău": "BZ", "Călărași": "CL",
+  "Caraș-Severin": "CS", "Cluj": "CJ", "Constanța": "CT",
+  "Covasna": "CV", "Dâmbovița": "DB", "Dolj": "DJ", "Galați": "GL",
+  "Giurgiu": "GR", "Gorj": "GJ", "Harghita": "HR", "Hunedoara": "HD",
+  "Ialomița": "IL", "Iași": "IS", "Ilfov": "IF", "Maramureș": "MM",
+  "Mehedinți": "MH", "Mureș": "MS", "Neamț": "NT", "Olt": "OT",
+  "Prahova": "PH", "Sălaj": "SJ", "Satu Mare": "SM", "Sibiu": "SB",
+  "Suceava": "SV", "Teleorman": "TR", "Timiș": "TM", "Tulcea": "TL",
+  "Vâlcea": "VL", "Vaslui": "VS", "Vrancea": "VN", "București": "B"
 }
