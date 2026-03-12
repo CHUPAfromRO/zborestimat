@@ -21,7 +21,8 @@ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
 
 <div class="row">
 
-<div>
+<div class="panel">
+
 <label>Plecare</label>
 <select id="departure">
 <option>Târgu Mureș</option>
@@ -30,19 +31,16 @@ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
 <option>Arad</option>
 <option>Brașov</option>
 </select>
-</div>
-
-<div class="resultbox">
-<label>Timp zbor</label>
-<p><span id="time">-</span> min</p>
-</div>
-
-</div>
-
-<div class="destination-row">
 
 <label>Destinație</label>
 <input id="destination" placeholder="Ex: București">
+
+<button onclick="calculate()">Calculează</button>
+
+<div class="result">
+<p>Timp zbor: <span id="time">-</span> min</p>
+<p>Distanță: <span id="distance">-</span> NM</p>
+</div>
 
 </div>
 
