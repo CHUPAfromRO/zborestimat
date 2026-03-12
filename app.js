@@ -102,13 +102,7 @@ let points=[start,dest]
 let distance=routeDistance(points)
 let time=(distance/speed)*60
 
-// regula specială
-if(
-departure.includes("Târgu Mure") &&
-city.toLowerCase().includes("bucure")
-){
-time=100
-}
+
 
 document.getElementById("distance")
 .innerText=distance.toFixed(1)
