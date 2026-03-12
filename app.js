@@ -17,7 +17,25 @@ const bigCities = {
   "Sibiu": [45.7983, 24.1256]
 }
 
+const countyAbbr = {
+  "Alba": "AB", "Arad": "AR", "Argeș": "AG", "Bacău": "BC",
+  "Bihor": "BH", "Bistrița-Năsăud": "BN", "Botoșani": "BT",
+  "Brăila": "BR", "Brașov": "BV", "Buzău": "BZ", "Călărași": "CL",
+  "Caraș-Severin": "CS", "Cluj": "CJ", "Constanța": "CT",
+  "Covasna": "CV", "Dâmbovița": "DB", "Dolj": "DJ", "Galați": "GL",
+  "Giurgiu": "GR", "Gorj": "GJ", "Harghita": "HR", "Hunedoara": "HD",
+  "Ialomița": "IL", "Iași": "IS", "Ilfov": "IF", "Maramureș": "MM",
+  "Mehedinți": "MH", "Mureș": "MS", "Neamț": "NT", "Olt": "OT",
+  "Prahova": "PH", "Sălaj": "SJ", "Satu Mare": "SM", "Sibiu": "SB",
+  "Suceava": "SV", "Teleorman": "TR", "Timiș": "TM", "Tulcea": "TL",
+  "Vâlcea": "VL", "Vaslui": "VS", "Vrancea": "VN", "București": "B"
+}
+
 let start = cities["Târgu Mureș"]
+let route
+let destMarker
+let selectedDest = null
+let selectedName = ""
 
 const map = L.map('map').setView(start, 7)
 
@@ -25,9 +43,6 @@ L.tileLayer(
   'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
   { attribution: '© OpenStreetMap' }
 ).addTo(map)
-
-let route
-let destMarker
 
 Object.entries(bigCities).forEach(city => {
   L.marker(city[1])
@@ -59,22 +74,77 @@ function routeDistance(points) {
   return dist
 }
 
-async function calculate() {
-  const departure = document.getElementById("departure").value
-  start = cities[departure]
-console.log("rezultate:", data.length, data.map(d => d.address?.county))
-  const city = document.getElementById("destination").value.trim()
+function getCountyCode(item) {
+  const county = item.address?.county
+    ?.replace(/\s*Județ\s*/i, "")
+    ?.replace(/\s*County\s*/i, "")
+    ?.trim()
+  return countyAbbr[county] || county || ""
+}
 
-  let dest
-  let locationName = city
+document.getElementById("destination").addEventListener("input", async function () {
+  const city = this.value.trim()
+  const container = document.getElementById("suggestions")
 
-  if (city.toLowerCase().includes("bucure")) {
-    dest = [44.4268, 26.1025]
-    resolveRoute(dest, locationName, departure)
+  selectedDest = null
+  selectedName = ""
+
+  if (city.length < 3) {
+    container.innerHTML = ""
     return
   }
 
-  const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&q=${encodeURIComponent(city)},Romania`
+  if (city.toLowerCase().includes("bucure")) {
+    container.innerHTML = ""
+    return
+  }
+
+  const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=10&countrycodes=ro&q=${encodeURIComponent(city)}`
+  const res = await fetch(url)
+  const data = await res.json()
+
+  const unique = [...new Map(data.map(item => {
+    const code = getCountyCode(item)
+    return [code, item]
+  })).values()]
+
+  container.innerHTML = ""
+
+  unique.forEach(item => {
+    const code = getCountyCode(item)
+    const locationName = code ? `${city} (${code})` : city
+
+    const div = document.createElement("div")
+    div.className = "suggestion-item"
+    div.textContent = locationName
+    div.onclick = () => {
+      document.getElementById("destination").value = locationName
+      container.innerHTML = ""
+      selectedDest = [parseFloat(item.lat), parseFloat(item.lon)]
+      selectedName = locationName
+    }
+    container.appendChild(div)
+  })
+})
+
+async function calculate() {
+  const departure = document.getElementById("departure").value
+  start = cities[departure]
+
+  const city = document.getElementById("destination").value.trim()
+  if (!city) return
+
+  if (city.toLowerCase().includes("bucure")) {
+    resolveRoute([44.4268, 26.1025], city, departure)
+    return
+  }
+
+  if (selectedDest) {
+    resolveRoute(selectedDest, selectedName, departure)
+    return
+  }
+
+  const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=10&countrycodes=ro&q=${encodeURIComponent(city)}`
   const res = await fetch(url)
   const data = await res.json()
 
@@ -83,47 +153,8 @@ console.log("rezultate:", data.length, data.map(d => d.address?.county))
     return
   }
 
-  const uniqueCounties = [...new Map(data.map(item => {
-    const county = item.address?.county
-      ?.replace(/\s*Județ\s*/i, "")
-      ?.replace(/\s*County\s*/i, "")
-      ?.trim()
-    return [county, item]
-  })).values()]
-
-  if (uniqueCounties.length > 1) {
-    showSuggestions(city, uniqueCounties, departure)
-    return
-  }
-
-  dest = [parseFloat(data[0].lat), parseFloat(data[0].lon)]
-  resolveRoute(dest, locationName, departure)
-}
-
-function showSuggestions(city, results, departure) {
-  const container = document.getElementById("suggestions")
-  container.innerHTML = ""
-
-  results.forEach(item => {
-    const county = item.address?.county
-      ?.replace(/\s*Județ\s*/i, "")
-      ?.replace(/\s*County\s*/i, "")
-      ?.trim()
-
-    const countyCode = countyAbbr[county] || county
-    const locationName = `${city} (${countyCode})`
-
-    const div = document.createElement("div")
-    div.className = "suggestion-item"
-    div.textContent = locationName
-    div.onclick = () => {
-      document.getElementById("destination").value = locationName
-      container.innerHTML = ""
-      const dest = [parseFloat(item.lat), parseFloat(item.lon)]
-      resolveRoute(dest, locationName, departure)
-    }
-    container.appendChild(div)
-  })
+  const dest = [parseFloat(data[0].lat), parseFloat(data[0].lon)]
+  resolveRoute(dest, city, departure)
 }
 
 function resolveRoute(dest, locationName, departure) {
@@ -149,18 +180,4 @@ function resolveRoute(dest, locationName, departure) {
   }).addTo(map)
 
   map.fitBounds(route.getBounds())
-}
-
-const countyAbbr = {
-  "Alba": "AB", "Arad": "AR", "Argeș": "AG", "Bacău": "BC",
-  "Bihor": "BH", "Bistrița-Năsăud": "BN", "Botoșani": "BT",
-  "Brăila": "BR", "Brașov": "BV", "Buzău": "BZ", "Călărași": "CL",
-  "Caraș-Severin": "CS", "Cluj": "CJ", "Constanța": "CT",
-  "Covasna": "CV", "Dâmbovița": "DB", "Dolj": "DJ", "Galați": "GL",
-  "Giurgiu": "GR", "Gorj": "GJ", "Harghita": "HR", "Hunedoara": "HD",
-  "Ialomița": "IL", "Iași": "IS", "Ilfov": "IF", "Maramureș": "MM",
-  "Mehedinți": "MH", "Mureș": "MS", "Neamț": "NT", "Olt": "OT",
-  "Prahova": "PH", "Sălaj": "SJ", "Satu Mare": "SM", "Sibiu": "SB",
-  "Suceava": "SV", "Teleorman": "TR", "Timiș": "TM", "Tulcea": "TL",
-  "Vâlcea": "VL", "Vaslui": "VS", "Vrancea": "VN", "București": "B"
 }
