@@ -36,6 +36,14 @@ let route
 let destMarker
 let selectedDest = null
 let selectedName = ""
+let searchTimeout = null
+
+const fetchOpts = {
+  headers: {
+    "Accept-Language": "ro",
+    "User-Agent": "calculator-zbor/1.0"
+  }
+}
 
 const map = L.map('map').setView(start, 7)
 
@@ -82,49 +90,50 @@ function getCountyCode(item) {
   return countyAbbr[county] || county || ""
 }
 
-document.getElementById("destination").addEventListener("input", async function () {
+document.getElementById("destination").addEventListener("input", function () {
   const city = this.value.trim()
   const container = document.getElementById("suggestions")
 
   selectedDest = null
   selectedName = ""
-
-  if (city.length < 3) {
-    container.innerHTML = ""
-    return
-  }
-
-  if (city.toLowerCase().includes("bucure")) {
-    container.innerHTML = ""
-    return
-  }
-
-  const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=10&countrycodes=ro&q=${encodeURIComponent(city)}`
-  const res = await fetch(url)
-  const data = await res.json()
-
-  const unique = [...new Map(data.map(item => {
-    const code = getCountyCode(item)
-    return [code, item]
-  })).values()]
-
   container.innerHTML = ""
 
-  unique.forEach(item => {
-    const code = getCountyCode(item)
-    const locationName = code ? `${city} (${code})` : city
+  if (city.length < 3) return
+  if (city.toLowerCase().includes("bucure")) return
 
-    const div = document.createElement("div")
-    div.className = "suggestion-item"
-    div.textContent = locationName
-    div.onclick = () => {
-      document.getElementById("destination").value = locationName
+  clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(async () => {
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=10&countrycodes=ro&q=${encodeURIComponent(city)}`
+      const res = await fetch(url, fetchOpts)
+      const data = await res.json()
+
+      const unique = [...new Map(data.map(item => {
+        const code = getCountyCode(item)
+        return [code, item]
+      })).values()]
+
       container.innerHTML = ""
-      selectedDest = [parseFloat(item.lat), parseFloat(item.lon)]
-      selectedName = locationName
+
+      unique.forEach(item => {
+        const code = getCountyCode(item)
+        const locationName = code ? `${city} (${code})` : city
+
+        const div = document.createElement("div")
+        div.className = "suggestion-item"
+        div.textContent = locationName
+        div.onclick = () => {
+          document.getElementById("destination").value = locationName
+          container.innerHTML = ""
+          selectedDest = [parseFloat(item.lat), parseFloat(item.lon)]
+          selectedName = locationName
+        }
+        container.appendChild(div)
+      })
+    } catch (e) {
+      console.error("Eroare căutare:", e)
     }
-    container.appendChild(div)
-  })
+  }, 400)
 })
 
 async function calculate() {
@@ -144,17 +153,21 @@ async function calculate() {
     return
   }
 
-  const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=10&countrycodes=ro&q=${encodeURIComponent(city)}`
-  const res = await fetch(url)
-  const data = await res.json()
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=10&countrycodes=ro&q=${encodeURIComponent(city)}`
+    const res = await fetch(url, fetchOpts)
+    const data = await res.json()
 
-  if (data.length === 0) {
-    alert("Localitate negăsită")
-    return
+    if (data.length === 0) {
+      alert("Localitate negăsită")
+      return
+    }
+
+    const dest = [parseFloat(data[0].lat), parseFloat(data[0].lon)]
+    resolveRoute(dest, city, departure)
+  } catch (e) {
+    alert("Eroare la căutare")
   }
-
-  const dest = [parseFloat(data[0].lat), parseFloat(data[0].lon)]
-  resolveRoute(dest, city, departure)
 }
 
 function resolveRoute(dest, locationName, departure) {
