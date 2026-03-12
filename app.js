@@ -62,7 +62,7 @@ function routeDistance(points) {
 async function calculate() {
   const departure = document.getElementById("departure").value
   start = cities[departure]
-
+console.log("rezultate:", data.length, data.map(d => d.address?.county))
   const city = document.getElementById("destination").value.trim()
 
   let dest
