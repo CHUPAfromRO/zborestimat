@@ -104,7 +104,7 @@ let time=(distance/speed)*60
 
 // regula specială
 if(
-departure==="Târgu Mureș" &&
+departure.includes("Târgu Mure") &&
 city.toLowerCase().includes("bucure")
 ){
 time=100
