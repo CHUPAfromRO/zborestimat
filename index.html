@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<title>Flight Time Calculator</title>
+
+<link rel="stylesheet" href="style.css">
+
+<link
+rel="stylesheet"
+href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+
+</head>
+
+<body>
+
+<h1>Flight Time Estimator</h1>
+
+<div class="panel">
+
+<label>Plecare</label>
+<input value="Târgu Mureș" disabled>
+
+<label>Destinație</label>
+<input id="destination" placeholder="Ex: Iași">
+
+<button onclick="calculate()">Calculează</button>
+
+<div class="result">
+<p>Distanță: <span id="distance">-</span> NM</p>
+<p>Timp zbor: <span id="time">-</span> min</p>
+</div>
+
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
