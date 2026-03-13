@@ -226,6 +226,3 @@ weight:4
 })
 
 }
-
-  map.fitBounds(route.getBounds())
-}
