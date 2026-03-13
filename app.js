@@ -170,59 +170,30 @@ async function calculate() {
   }
 }
 
-function resolveRoute(dest, locationName, departure){
+function resolveRoute(dest, locationName, departure) {
+  const points = [start, dest]
+  const distance = routeDistance(points)
+  let time = (distance / speed) * 60
 
-const points=[start,dest]
+  if (departure.includes("Mure") && locationName.toLowerCase().includes("bucure")) {
+    time = 100
+  }
 
-let distance=routeDistance(points)
-let time=(distance/speed)*60
+  document.getElementById("distance").innerText = distance.toFixed(1)
+  document.getElementById("time").innerText = time.toFixed(0)
 
-if(
-departure.includes("Mure") &&
-locationName.toLowerCase().includes("bucure")
-){
-time=100
-}
+  if (route) map.removeLayer(route)
+  if (destMarker) map.removeLayer(destMarker)
 
-document.getElementById("distance").innerText=distance.toFixed(1)
-document.getElementById("time").innerText=time.toFixed(0)
+  destMarker = L.marker(dest)
+  .addTo(map)
+  .bindPopup(locationName)
+  .openPopup()
 
-if(route) map.removeLayer(route)
-if(destMarker) map.removeLayer(destMarker)
+  route = L.polyline(points, {
+    color: "red",
+    weight: 4
+  }).addTo(map)
 
-route=L.polyline(points,{
-color:"red",
-weight:4
-}).addTo(map)
-
-destMarker=L.marker(dest,{
-draggable:true
-}).addTo(map).bindPopup(locationName).openPopup()
-
-map.fitBounds(route.getBounds())
-
-// drag & drop recalcul traseu
-destMarker.on("dragend",function(e){
-
-const pos=e.target.getLatLng()
-
-const newDest=[pos.lat,pos.lng]
-
-const newPoints=[start,newDest]
-
-const newDistance=routeDistance(newPoints)
-const newTime=(newDistance/speed)*60
-
-document.getElementById("distance").innerText=newDistance.toFixed(1)
-document.getElementById("time").innerText=newTime.toFixed(0)
-
-if(route) map.removeLayer(route)
-
-route=L.polyline(newPoints,{
-color:"red",
-weight:4
-}).addTo(map)
-
-})
-
+  map.fitBounds(route.getBounds())
 }
