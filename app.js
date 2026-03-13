@@ -85,16 +85,7 @@ function getCountyCode(item) {
 }
 
 function getLocalityName(item) {
-  return (
-    item.address?.city ||
-    item.address?.town ||
-    item.address?.village ||
-    item.address?.hamlet ||
-    item.address?.suburb ||
-    item.namedetails?.name ||
-    item.display_name?.split(",")[0]?.trim() ||
-    ""
-  )
+  return item.display_name?.split(",")[0]?.trim() || ""
 }
 
 function filterAndSort(data) {
@@ -122,13 +113,12 @@ document.getElementById("destination").addEventListener("input", function () {
   clearTimeout(searchTimeout)
   searchTimeout = setTimeout(async () => {
     try {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&namedetails=1&limit=15&countrycodes=ro&q=${encodeURIComponent(city)}`
+      const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&countrycodes=ro&q=${encodeURIComponent(city)}`
       const res = await fetch(url, fetchOpts)
       const data = await res.json()
 
       const filtered = filterAndSort(data)
 
-      // deduplicare dupa nume+judet ca sa pastram localitati omonime din judete diferite
       const seen = new Set()
       const unique = filtered.filter(item => {
         const code = getCountyCode(item)
@@ -190,7 +180,7 @@ async function calculate() {
   }
 
   try {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&namedetails=1&limit=15&countrycodes=ro&q=${encodeURIComponent(city)}`
+    const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&countrycodes=ro&q=${encodeURIComponent(city)}`
     const res = await fetch(url, fetchOpts)
     const data = await res.json()
 
