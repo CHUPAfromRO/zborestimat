@@ -185,7 +185,27 @@ function resolveRoute(dest, locationName, departure) {
   if (route) map.removeLayer(route)
   if (destMarker) map.removeLayer(destMarker)
 
-  destMarker = L.marker(dest).addTo(map).bindPopup(locationName)
+  destMarker = L.marker(dest, { draggable: true }).addTo(map).bindPopup(locationName)
+
+  destMarker.on("dragend", function () {
+    const pos = destMarker.getLatLng()
+    const newDest = [pos.lat, pos.lng]
+
+    const newDistance = routeDistance([start, newDest])
+    let newTime = (newDistance / speed) * 60
+
+    document.getElementById("distance").innerText = newDistance.toFixed(1)
+    document.getElementById("time").innerText = newTime.toFixed(0)
+
+    if (route) map.removeLayer(route)
+    route = L.polyline([start, newDest], {
+      color: "red",
+      weight: 4
+    }).addTo(map)
+
+    document.getElementById("destination").value = `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)}`
+    selectedDest = newDest
+  })
 
   route = L.polyline(points, {
     color: "red",
