@@ -185,7 +185,10 @@ function resolveRoute(dest, locationName, departure) {
   if (route) map.removeLayer(route)
   if (destMarker) map.removeLayer(destMarker)
 
-  destMarker = L.marker(dest).addTo(map).bindPopup(locationName)
+  destMarker = L.marker(dest)
+  .addTo(map)
+  .bindPopup(locationName)
+  .openPopup()
 
   route = L.polyline(points, {
     color: "red",
