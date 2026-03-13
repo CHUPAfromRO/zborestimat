@@ -76,3 +76,9 @@ button:hover{
   background:#e8f0fc;
   color:#2c7be5;
 }
+.nota {
+  text-align: center;
+  color: #888;
+  font-size: 13px;
+  margin: 10px 20px 20px;
+}
