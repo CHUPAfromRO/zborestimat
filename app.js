@@ -8,15 +8,6 @@ const cities = {
   "Brașov": [45.6579, 25.6012]
 }
 
-const bigCities = {
-  "București": [44.4268, 26.1025],
-  "Cluj-Napoca": [46.7712, 23.6236],
-  "Iași": [47.1585, 27.6014],
-  "Timișoara": [45.7489, 21.2087],
-  "Oradea": [47.0465, 21.9189],
-  "Sibiu": [45.7983, 24.1256]
-}
-
 const countyAbbr = {
   "Alba": "AB", "Arad": "AR", "Argeș": "AG", "Bacău": "BC",
   "Bihor": "BH", "Bistrița-Năsăud": "BN", "Botoșani": "BT",
@@ -52,10 +43,11 @@ L.tileLayer(
   { attribution: '© OpenStreetMap' }
 ).addTo(map)
 
-Object.entries(bigCities).forEach(city => {
-  L.marker(city[1])
-    .addTo(map)
-    .bindPopup(city[0])
+map.on("click", function (e) {
+  const newDest = [e.latlng.lat, e.latlng.lng]
+  const departure = document.getElementById("departure").value
+  start = cities[departure]
+  resolveRoute(newDest, `${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`, departure)
 })
 
 function haversine(lat1, lon1, lat2, lon2) {
@@ -173,11 +165,7 @@ async function calculate() {
 function resolveRoute(dest, locationName, departure) {
   const points = [start, dest]
   const distance = routeDistance(points)
-  let time = (distance / speed) * 60
-
-  if (departure.includes("Mure") && locationName.toLowerCase().includes("bucure")) {
-    time = 100
-  }
+  const time = (distance / speed) * 60
 
   document.getElementById("distance").innerText = distance.toFixed(1)
   document.getElementById("time").innerText = time.toFixed(0)
@@ -187,12 +175,12 @@ function resolveRoute(dest, locationName, departure) {
 
   destMarker = L.marker(dest, { draggable: true }).addTo(map).bindPopup(locationName)
 
-  destMarker.on("dragend", function () {
+  destMarker.on("drag", function () {
     const pos = destMarker.getLatLng()
     const newDest = [pos.lat, pos.lng]
 
     const newDistance = routeDistance([start, newDest])
-    let newTime = (newDistance / speed) * 60
+    const newTime = (newDistance / speed) * 60
 
     document.getElementById("distance").innerText = newDistance.toFixed(1)
     document.getElementById("time").innerText = newTime.toFixed(0)
@@ -202,9 +190,12 @@ function resolveRoute(dest, locationName, departure) {
       color: "red",
       weight: 4
     }).addTo(map)
+  })
 
+  destMarker.on("dragend", function () {
+    const pos = destMarker.getLatLng()
+    selectedDest = [pos.lat, pos.lng]
     document.getElementById("destination").value = `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)}`
-    selectedDest = newDest
   })
 
   route = L.polyline(points, {
