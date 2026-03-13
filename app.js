@@ -190,10 +190,32 @@ function resolveRoute(dest, locationName, departure) {
   .bindPopup(locationName)
   .openPopup()
 
-  route = L.polyline(points, {
-    color: "red",
-    weight: 4
+ destMarker.on("dragend", function(e){
+
+  const pos = e.target.getLatLng()
+
+  const newDest = [pos.lat, pos.lng]
+
+  const points = [start, newDest]
+
+  const distance = routeDistance(points)
+
+  const time = (distance / speed) * 60
+
+  document.getElementById("distance")
+    .innerText = distance.toFixed(1)
+
+  document.getElementById("time")
+    .innerText = time.toFixed(0)
+
+  if(route) map.removeLayer(route)
+
+  route = L.polyline(points,{
+    color:"red",
+    weight:4
   }).addTo(map)
+
+})
 
   map.fitBounds(route.getBounds())
 }
