@@ -22,6 +22,8 @@ const countyAbbr = {
   "Vâlcea": "VL", "Vaslui": "VS", "Vrancea": "VN", "București": "B"
 }
 
+const allowedTypes = ["city", "town", "village", "hamlet", "suburb", "quarter", "neighbourhood", "municipality"]
+
 let start = cities["Târgu Mureș"]
 let route
 let destMarker
@@ -82,6 +84,30 @@ function getCountyCode(item) {
   return countyAbbr[county] || county || ""
 }
 
+function getLocalityName(item) {
+  return (
+    item.address?.city ||
+    item.address?.town ||
+    item.address?.village ||
+    item.address?.hamlet ||
+    item.address?.suburb ||
+    item.namedetails?.name ||
+    item.display_name?.split(",")[0]?.trim() ||
+    ""
+  )
+}
+
+function filterAndSort(data) {
+  return data
+    .filter(item => allowedTypes.includes(item.type) || allowedTypes.includes(item.addresstype))
+    .sort((a, b) => {
+      const priority = ["city", "municipality", "town", "village", "hamlet", "suburb", "quarter", "neighbourhood"]
+      const aP = priority.indexOf(a.type !== "administrative" ? a.type : a.addresstype)
+      const bP = priority.indexOf(b.type !== "administrative" ? b.type : b.addresstype)
+      return (aP === -1 ? 99 : aP) - (bP === -1 ? 99 : bP)
+    })
+}
+
 document.getElementById("destination").addEventListener("input", function () {
   const city = this.value.trim()
   const container = document.getElementById("suggestions")
@@ -96,20 +122,38 @@ document.getElementById("destination").addEventListener("input", function () {
   clearTimeout(searchTimeout)
   searchTimeout = setTimeout(async () => {
     try {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=10&countrycodes=ro&q=${encodeURIComponent(city)}`
+      const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&namedetails=1&limit=15&countrycodes=ro&q=${encodeURIComponent(city)}`
       const res = await fetch(url, fetchOpts)
       const data = await res.json()
 
-      const unique = [...new Map(data.map(item => {
+      const filtered = filterAndSort(data)
+
+      // deduplicare dupa nume+judet ca sa pastram localitati omonime din judete diferite
+      const seen = new Set()
+      const unique = filtered.filter(item => {
         const code = getCountyCode(item)
-        return [code, item]
-      })).values()]
+        const name = getLocalityName(item)
+        const key = `${name.toLowerCase()}-${code}`
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
 
       container.innerHTML = ""
 
+      if (unique.length === 0) {
+        const div = document.createElement("div")
+        div.className = "suggestion-item"
+        div.style.color = "#999"
+        div.textContent = "Nicio localitate găsită"
+        container.appendChild(div)
+        return
+      }
+
       unique.forEach(item => {
         const code = getCountyCode(item)
-        const locationName = code ? `${city} (${code})` : city
+        const name = getLocalityName(item)
+        const locationName = code ? `${name} (${code})` : name
 
         const div = document.createElement("div")
         div.className = "suggestion-item"
@@ -136,7 +180,7 @@ async function calculate() {
   if (!city) return
 
   if (city.toLowerCase().includes("bucure")) {
-    resolveRoute([44.4268, 26.1025], city, departure)
+    resolveRoute([44.4268, 26.1025], "București (B)", departure)
     return
   }
 
@@ -146,17 +190,23 @@ async function calculate() {
   }
 
   try {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=10&countrycodes=ro&q=${encodeURIComponent(city)}`
+    const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&namedetails=1&limit=15&countrycodes=ro&q=${encodeURIComponent(city)}`
     const res = await fetch(url, fetchOpts)
     const data = await res.json()
 
-    if (data.length === 0) {
-      alert("Localitate negăsită")
+    const filtered = filterAndSort(data)
+
+    if (filtered.length === 0) {
+      alert("Localitate negăsită. Selectați din lista de sugestii.")
       return
     }
 
-    const dest = [parseFloat(data[0].lat), parseFloat(data[0].lon)]
-    resolveRoute(dest, city, departure)
+    const best = filtered[0]
+    const code = getCountyCode(best)
+    const name = getLocalityName(best)
+    const locationName = code ? `${name} (${code})` : name
+    const dest = [parseFloat(best.lat), parseFloat(best.lon)]
+    resolveRoute(dest, locationName, departure)
   } catch (e) {
     alert("Eroare la căutare")
   }
@@ -186,10 +236,7 @@ function resolveRoute(dest, locationName, departure) {
     document.getElementById("time").innerText = newTime.toFixed(0)
 
     if (route) map.removeLayer(route)
-    route = L.polyline([start, newDest], {
-      color: "red",
-      weight: 4
-    }).addTo(map)
+    route = L.polyline([start, newDest], { color: "red", weight: 4 }).addTo(map)
   })
 
   destMarker.on("dragend", function () {
@@ -198,10 +245,6 @@ function resolveRoute(dest, locationName, departure) {
     document.getElementById("destination").value = `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)}`
   })
 
-  route = L.polyline(points, {
-    color: "red",
-    weight: 4
-  }).addTo(map)
-
+  route = L.polyline(points, { color: "red", weight: 4 }).addTo(map)
   map.fitBounds(route.getBounds())
 }
