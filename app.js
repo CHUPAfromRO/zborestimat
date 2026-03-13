@@ -170,52 +170,62 @@ async function calculate() {
   }
 }
 
-function resolveRoute(dest, locationName, departure) {
-  const points = [start, dest]
-  const distance = routeDistance(points)
-  let time = (distance / speed) * 60
+function resolveRoute(dest, locationName, departure){
 
-  if (departure.includes("Mure") && locationName.toLowerCase().includes("bucure")) {
-    time = 100
-  }
+const points=[start,dest]
 
-  document.getElementById("distance").innerText = distance.toFixed(1)
-  document.getElementById("time").innerText = time.toFixed(0)
+let distance=routeDistance(points)
+let time=(distance/speed)*60
 
-  if (route) map.removeLayer(route)
-  if (destMarker) map.removeLayer(destMarker)
+if(
+departure.includes("Mure") &&
+locationName.toLowerCase().includes("bucure")
+){
+time=100
+}
 
-  destMarker = L.marker(dest)
-  .addTo(map)
-  .bindPopup(locationName)
-  .openPopup()
+document.getElementById("distance").innerText=distance.toFixed(1)
+document.getElementById("time").innerText=time.toFixed(0)
 
- destMarker.on("dragend", function(e){
+if(route) map.removeLayer(route)
+if(destMarker) map.removeLayer(destMarker)
 
-  const pos = e.target.getLatLng()
+route=L.polyline(points,{
+color:"red",
+weight:4
+}).addTo(map)
 
-  const newDest = [pos.lat, pos.lng]
+destMarker=L.marker(dest,{
+draggable:true
+}).addTo(map).bindPopup(locationName).openPopup()
 
-  const points = [start, newDest]
+map.fitBounds(route.getBounds())
 
-  const distance = routeDistance(points)
+// drag & drop recalcul traseu
+destMarker.on("dragend",function(e){
 
-  const time = (distance / speed) * 60
+const pos=e.target.getLatLng()
 
-  document.getElementById("distance")
-    .innerText = distance.toFixed(1)
+const newDest=[pos.lat,pos.lng]
 
-  document.getElementById("time")
-    .innerText = time.toFixed(0)
+const newPoints=[start,newDest]
 
-  if(route) map.removeLayer(route)
+const newDistance=routeDistance(newPoints)
+const newTime=(newDistance/speed)*60
 
-  route = L.polyline(points,{
-    color:"red",
-    weight:4
-  }).addTo(map)
+document.getElementById("distance").innerText=newDistance.toFixed(1)
+document.getElementById("time").innerText=newTime.toFixed(0)
+
+if(route) map.removeLayer(route)
+
+route=L.polyline(newPoints,{
+color:"red",
+weight:4
+}).addTo(map)
 
 })
+
+}
 
   map.fitBounds(route.getBounds())
 }
