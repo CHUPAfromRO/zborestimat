@@ -45,11 +45,62 @@ L.tileLayer(
   { attribution: '© OpenStreetMap' }
 ).addTo(map)
 
-map.on("click", function (e) {
-  const newDest = [e.latlng.lat, e.latlng.lng]
+function toDMS(deg, isLat) {
+  const d = Math.floor(Math.abs(deg))
+  const mFull = (Math.abs(deg) - d) * 60
+  const m = Math.floor(mFull)
+  const s = ((mFull - m) * 60).toFixed(1)
+  const dir = isLat ? (deg >= 0 ? "N" : "S") : (deg >= 0 ? "E" : "V")
+  return {
+    dm: `${d}° ${m.toString().padStart(2, "0")}'`,
+    dms: `${d}° ${m.toString().padStart(2, "0")}' ${s}"`,
+    dir
+  }
+}
+
+function buildPopup(latDMS, lngDMS, altText) {
+  return `
+    <div style="font-family: monospace; font-size: 12px; line-height: 1.8; min-width: 220px;">
+      <b style="font-size: 13px; font-family: sans-serif;">📍 Coordonate</b><br>
+      <hr style="margin: 4px 0; border-color: #ccc">
+      <b>Grade, Minute:</b><br>
+      &nbsp;Lat: ${latDMS.dm}' ${latDMS.dir}<br>
+      &nbsp;Lon: ${lngDMS.dm}' ${lngDMS.dir}<br>
+      <b>Grade, Minute, Secunde:</b><br>
+      &nbsp;Lat: ${latDMS.dms}" ${latDMS.dir}<br>
+      &nbsp;Lon: ${lngDMS.dms}" ${lngDMS.dir}<br>
+      <hr style="margin: 4px 0; border-color: #ccc">
+      <b>Altitudine:</b> ${altText}
+    </div>
+  `
+}
+
+map.on("click", async function (e) {
+  const lat = e.latlng.lat
+  const lng = e.latlng.lng
+  const newDest = [lat, lng]
+
+  const latDMS = toDMS(lat, true)
+  const lngDMS = toDMS(lng, false)
+
+  const popup = L.popup()
+    .setLatLng(e.latlng)
+    .setContent(buildPopup(latDMS, lngDMS, "Se încarcă..."))
+    .openOn(map)
+
+  try {
+    const res = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lng}`)
+    const data = await res.json()
+    const meters = data.results[0].elevation
+    const feet = (meters * 3.28084).toFixed(0)
+    popup.setContent(buildPopup(latDMS, lngDMS, `${feet} ft`))
+  } catch {
+    popup.setContent(buildPopup(latDMS, lngDMS, "Indisponibil"))
+  }
+
   const departure = document.getElementById("departure").value
   start = cities[departure]
-  resolveRoute(newDest, `${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`, departure)
+  resolveRoute(newDest, `${lat.toFixed(4)}, ${lng.toFixed(4)}`, departure)
 })
 
 function haversine(lat1, lon1, lat2, lon2) {
