@@ -52,7 +52,7 @@ function toDMS(deg, isLat) {
   const s = ((mFull - m) * 60).toFixed(1)
   const dir = isLat ? (deg >= 0 ? "N" : "S") : (deg >= 0 ? "E" : "V")
   return {
-    dm: `${d}° ${m.toString().padStart(2, "0")}'`,
+    dm: `${d}° ${mDec}'`,
     dms: `${d}° ${m.toString().padStart(2, "0")}' ${s}"`,
     dir
   }
