@@ -51,6 +51,7 @@ function toDMS(deg, isLat) {
   const m = Math.floor(mFull)
   const s = ((mFull - m) * 60).toFixed(1)
   const dir = isLat ? (deg >= 0 ? "N" : "S") : (deg >= 0 ? "E" : "V")
+  const mDec = mFull.toFixed(3).padStart(6, "0")
   return {
     dm: `${d}° ${mDec}'`,
     dms: `${d}° ${m.toString().padStart(2, "0")}' ${s}"`,
@@ -64,11 +65,11 @@ function buildPopup(latDMS, lngDMS, altText) {
       <b style="font-size: 13px; font-family: sans-serif;">📍 Coordonate</b><br>
       <hr style="margin: 4px 0; border-color: #ccc">
       <b>Grade, Minute:</b><br>
-      &nbsp;Lat: ${latDMS.dm}' ${latDMS.dir}<br>
-      &nbsp;Lon: ${lngDMS.dm}' ${lngDMS.dir}<br>
+      &nbsp;Lat: ${latDMS.dm} ${latDMS.dir}<br>
+      &nbsp;Lon: ${lngDMS.dm} ${lngDMS.dir}<br>
       <b>Grade, Minute, Secunde:</b><br>
-      &nbsp;Lat: ${latDMS.dms}" ${latDMS.dir}<br>
-      &nbsp;Lon: ${lngDMS.dms}" ${lngDMS.dir}<br>
+      &nbsp;Lat: ${latDMS.dms} ${latDMS.dir}<br>
+      &nbsp;Lon: ${lngDMS.dms} ${lngDMS.dir}<br>
       <hr style="margin: 4px 0; border-color: #ccc">
       <b>Altitudine:</b> ${altText}
     </div>
