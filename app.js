@@ -76,6 +76,101 @@ function buildPopup(latDMS, lngDMS, altText) {
   `
 }
 
+// ---------------------------------------------------------------------------
+// Coordinate parsing
+// Accepts three formats:
+//   1. Decimal degrees:        46.5424, 24.5574   or   46.5424 24.5574
+//   2. DDMMss.s (DMS compact): N463232.8 E0243320.9
+//   3. DDMM.mmm (DMm compact): N4632.547 E02433.448
+// ---------------------------------------------------------------------------
+function parseCoords(raw) {
+  const s = raw.trim().toUpperCase()
+
+  // Format 1: two decimal numbers separated by comma or space
+  const decRe = /^(-?\d{1,3}(?:\.\d+)?)[,\s]+(-?\d{1,3}(?:\.\d+)?)$/
+  const decMatch = s.match(decRe)
+  if (decMatch) {
+    const lat = parseFloat(decMatch[1])
+    const lng = parseFloat(decMatch[2])
+    if (isValidLatLng(lat, lng)) return { lat, lng, format: "DD" }
+  }
+
+  // Format 2 & 3: N/S + digits + E/W + digits
+  // Hemisphere indicators
+  const coordRe = /^([NS])(\d+(?:\.\d+)?)\s+([EWV])(\d+(?:\.\d+)?)$/
+  const coordMatch = s.match(coordRe)
+  if (coordMatch) {
+    const latHem = coordMatch[1]
+    const latRaw = coordMatch[2]
+    const lngHem = coordMatch[3]
+    const lngRaw = coordMatch[4]
+
+    const lat = parseDMorDMS(latRaw, latHem)
+    const lng = parseDMorDMS(lngRaw, lngHem)
+
+    if (lat !== null && lng !== null && isValidLatLng(lat, lng)) {
+      // Detect which format based on whether decimal point lands after 4 or 6 integer digits
+      const dotPos = latRaw.indexOf(".")
+      const intDigits = dotPos === -1 ? latRaw.length : dotPos
+      const format = intDigits <= 4 ? "DMm" : "DMS"
+      return { lat, lng, format }
+    }
+  }
+
+  return null
+}
+
+// Parse a compact coordinate string into decimal degrees.
+// DDMM.mmm  → degrees + minutes with decimals
+// DDMMss.s  → degrees + minutes + seconds
+function parseDMorDMS(raw, hem) {
+  const dotPos = raw.indexOf(".")
+  const intPart = dotPos === -1 ? raw : raw.substring(0, dotPos)
+  const fracPart = dotPos === -1 ? "" : raw.substring(dotPos) // includes the dot
+
+  // Determine degrees length: lat uses 2 (DD), lon uses 3 (DDD)
+  // We figure it out from total integer digits:
+  //   lat DMS: DDMMSS → 6 digits, lat DMm: DDMM → 4 digits
+  //   lon DMS: DDDMMSS → 7 digits, lon DMm: DDDMM → 5 digits
+  // Longitude hemispheres (E, W, V) use 3-digit degrees, latitude (N, S) use 2-digit
+  const isLon = (hem === "E" || hem === "W" || hem === "V")
+  const degLen = isLon ? 3 : 2
+
+  const deg = parseInt(intPart.substring(0, degLen), 10)
+  const remainder = intPart.substring(degLen)
+
+  let decDeg
+  if (remainder.length <= 2) {
+    // DMm format: remaining digits are MM, fraction belongs to minutes
+    const minutes = parseFloat(remainder + fracPart)
+    decDeg = deg + minutes / 60
+  } else {
+    // DMS format: remaining digits are MMSS, fraction belongs to seconds
+    const mm = parseInt(remainder.substring(0, 2), 10)
+    const ss = parseFloat(remainder.substring(2) + fracPart)
+    decDeg = deg + mm / 60 + ss / 3600
+  }
+
+  const sign = (hem === "S" || hem === "W" || hem === "V") ? -1 : 1
+  return sign * decDeg
+}
+
+function isValidLatLng(lat, lng) {
+  return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
+}
+
+function formatCoordResult(lat, lng, format) {
+  const latF = lat.toFixed(5)
+  const lngF = lng.toFixed(5)
+  if (format === "DD") return `${latF}, ${lngF}`
+  const latDMS = toDMS(lat, true)
+  const lngDMS = toDMS(lng, false)
+  if (format === "DMm") return `${latDMS.dir}${latDMS.dm} ${lngDMS.dir}${lngDMS.dm}`
+  return `${latDMS.dir}${latDMS.dms} ${lngDMS.dir}${lngDMS.dms}`
+}
+
+// ---------------------------------------------------------------------------
+
 map.on("click", async function (e) {
   const lat = e.latlng.lat
   const lng = e.latlng.lng
@@ -213,6 +308,43 @@ document.getElementById("destination").addEventListener("input", function () {
     }
   }, 400)
 })
+
+// Coordinate input field — live validation feedback
+document.getElementById("coordInput").addEventListener("input", function () {
+  const val = this.value.trim()
+  const feedback = document.getElementById("coordFeedback")
+
+  if (!val) {
+    feedback.textContent = ""
+    feedback.style.color = ""
+    return
+  }
+
+  const parsed = parseCoords(val)
+  if (parsed) {
+    feedback.textContent = `✔ ${formatCoordResult(parsed.lat, parsed.lng, parsed.format)}`
+    feedback.style.color = "green"
+  } else {
+    feedback.textContent = "Format nerecunoscut"
+    feedback.style.color = "red"
+  }
+})
+
+function calculateCoords() {
+  const val = document.getElementById("coordInput").value.trim()
+  if (!val) return
+
+  const parsed = parseCoords(val)
+  if (!parsed) {
+    alert("Format coordonate nerecunoscut.\n\nFormate acceptate:\n• 46.5424, 24.5574\n• N4632.547 E02433.448\n• N463232.8 E0243320.9")
+    return
+  }
+
+  const departure = document.getElementById("departure").value
+  start = cities[departure]
+  const label = formatCoordResult(parsed.lat, parsed.lng, parsed.format)
+  resolveRoute([parsed.lat, parsed.lng], label, departure)
+}
 
 async function calculate() {
   const departure = document.getElementById("departure").value
