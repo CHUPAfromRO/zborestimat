@@ -17,19 +17,55 @@
     <option>Arad</option>
     <option>Brașov</option>
   </select>
-  <label>Destinație</label>
+
+  <label>Destinație (nume localitate)</label>
   <div class="input-wrapper">
     <input id="destination" placeholder="Ex: Târgu Mureș">
     <div id="suggestions"></div>
   </div>
   <button onclick="calculate()">Calculează</button>
+
+  <label style="margin-top: 12px;">
+    Destinație după coordonate
+    <span class="help-icon" id="helpIcon">?
+      <div class="help-tooltip">
+        <b>Formate acceptate:</b><br><br>
+        <b>Grade zecimale:</b><br>
+        <code>46.5424, 24.5574</code><br><br>
+        <b>Grade Minute Zecimale:</b><br>
+        <code>N4632.547 E02433.448</code><br>
+        <span class="hint">→ N + GGMM.mmm &nbsp; E + GGGMM.mmm</span><br><br>
+        <b>Grade Minute Secunde:</b><br>
+        <code>N463232.8 E0243320.9</code><br>
+        <span class="hint">→ N + GGMMSS.s &nbsp; E + GGGMMSS.s</span>
+      </div>
+    </span>
+  </label>
+  <div class="input-wrapper">
+    <input id="coordInput" placeholder="Ex: N4632.547 E02433.448">
+  </div>
+  <div id="coordFeedback"></div>
+  <button onclick="calculateCoords()">Calculează coordonate</button>
+
   <div class="result">
     <p>Timp estimat de zbor: <span id="time">-</span> min</p>
     <p>Distanță: <span id="distance">-</span> NM</p>
   </div>
 </div>
+
 <div id="map"></div>
 <p class="nota">⚠️ Timpul estimat nu include procedurile de decolare/aterizare și nu ține cont de direcția și intensitatea vântului.</p>
+
+<script>
+  document.getElementById("helpIcon").addEventListener("click", function (e) {
+    e.stopPropagation()
+    this.classList.toggle("active")
+  })
+  document.addEventListener("click", function () {
+    document.getElementById("helpIcon").classList.remove("active")
+  })
+</script>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="app.js"></script>
 </body>
