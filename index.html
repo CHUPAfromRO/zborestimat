@@ -2,54 +2,66 @@
 <html lang="ro">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Calculator estimă de zbor</title>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 </head>
 <body>
 <h1>Calculator estimă de zbor</h1>
+
 <div class="panel">
-  <label>Plecare</label>
-  <select id="departure">
-    <option>Târgu Mureș</option>
-    <option>Jibou</option>
-    <option>Caransebeș</option>
-    <option>Arad</option>
-    <option>Brașov</option>
-  </select>
+  <div class="panel-columns">
 
-  <label>Destinație (nume localitate)</label>
-  <div class="input-wrapper">
-    <input id="destination" placeholder="Ex: Târgu Mureș">
-    <div id="suggestions"></div>
-  </div>
-  <button onclick="calculate()">Calculează</button>
+    <!-- Coloana stânga: plecare + destinație nume -->
+    <div class="panel-col">
+      <label>Plecare</label>
+      <select id="departure">
+        <option>Târgu Mureș</option>
+        <option>Jibou</option>
+        <option>Caransebeș</option>
+        <option>Arad</option>
+        <option>Brașov</option>
+      </select>
 
-  <label style="margin-top: 12px;">
-    Destinație după coordonate
-    <span class="help-icon" id="helpIcon">?
-      <div class="help-tooltip">
-        <b>Formate acceptate:</b><br><br>
-        <b>Grade zecimale:</b><br>
-        <code>46.5424, 24.5574</code><br><br>
-        <b>Grade Minute Zecimale:</b><br>
-        <code>N4632.547 E02433.448</code><br>
-        <span class="hint">→ N + GGMM.mmm &nbsp; E + GGGMM.mmm</span><br><br>
-        <b>Grade Minute Secunde:</b><br>
-        <code>N463232.8 E0243320.9</code><br>
-        <span class="hint">→ N + GGMMSS.s &nbsp; E + GGGMMSS.s</span>
+      <label>Destinație (nume localitate)</label>
+      <div class="input-wrapper">
+        <input id="destination" placeholder="Ex: Târgu Mureș">
+        <div id="suggestions"></div>
       </div>
-    </span>
-  </label>
-  <div class="input-wrapper">
-    <input id="coordInput" placeholder="Ex: N4632.547 E02433.448">
-  </div>
-  <div id="coordFeedback"></div>
-  <button onclick="calculateCoords()">Calculează coordonate</button>
+    </div>
 
+    <!-- Coloana dreapta: coordonate -->
+    <div class="panel-col">
+      <label>
+        Destinație după coordonate
+        <span class="help-icon" id="helpIcon">?
+          <div class="help-tooltip">
+            <b>Formate acceptate:</b><br><br>
+            <b>Grade zecimale:</b><br>
+            <code>46.5424, 24.5574</code><br><br>
+            <b>Grade Minute Zecimale:</b><br>
+            <code>N4632.547 E02433.448</code><br>
+            <span class="hint">→ N + GGMM.mmm &nbsp; E + GGGMM.mmm</span><br><br>
+            <b>Grade Minute Secunde:</b><br>
+            <code>N463232.8 E0243320.9</code><br>
+            <span class="hint">→ N + GGMMSS.s &nbsp; E + GGGMMSS.s</span>
+          </div>
+        </span>
+      </label>
+      <div class="input-wrapper">
+        <input id="coordInput" placeholder="Ex: N4632.547 E02433.448">
+      </div>
+      <div id="coordFeedback"></div>
+    </div>
+
+  </div>
+
+  <!-- Buton și rezultate pe toată lățimea -->
+  <button onclick="calculate()">Calculează</button>
   <div class="result">
-    <p>Timp estimat de zbor: <span id="time">-</span> min</p>
-    <p>Distanță: <span id="distance">-</span> NM</p>
+    <p>Timp estimat: <strong><span id="time">-</span> min</strong></p>
+    <p>Distanță: <strong><span id="distance">-</span> NM</strong></p>
   </div>
 </div>
 
