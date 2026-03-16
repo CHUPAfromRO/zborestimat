@@ -95,8 +95,7 @@ function parseCoords(raw) {
     if (isValidLatLng(lat, lng)) return { lat, lng, format: "DD" }
   }
 
-  // Format 2 & 3: N/S + digits + E/W + digits
-  // Hemisphere indicators
+  // Format 2 & 3: N/S + digits + E/W/V + digits
   const coordRe = /^([NS])(\d+(?:\.\d+)?)\s+([EWV])(\d+(?:\.\d+)?)$/
   const coordMatch = s.match(coordRe)
   if (coordMatch) {
@@ -109,7 +108,6 @@ function parseCoords(raw) {
     const lng = parseDMorDMS(lngRaw, lngHem)
 
     if (lat !== null && lng !== null && isValidLatLng(lat, lng)) {
-      // Detect which format based on whether decimal point lands after 4 or 6 integer digits
       const dotPos = latRaw.indexOf(".")
       const intDigits = dotPos === -1 ? latRaw.length : dotPos
       const format = intDigits <= 4 ? "DMm" : "DMS"
@@ -120,19 +118,11 @@ function parseCoords(raw) {
   return null
 }
 
-// Parse a compact coordinate string into decimal degrees.
-// DDMM.mmm  → degrees + minutes with decimals
-// DDMMss.s  → degrees + minutes + seconds
 function parseDMorDMS(raw, hem) {
   const dotPos = raw.indexOf(".")
   const intPart = dotPos === -1 ? raw : raw.substring(0, dotPos)
-  const fracPart = dotPos === -1 ? "" : raw.substring(dotPos) // includes the dot
+  const fracPart = dotPos === -1 ? "" : raw.substring(dotPos)
 
-  // Determine degrees length: lat uses 2 (DD), lon uses 3 (DDD)
-  // We figure it out from total integer digits:
-  //   lat DMS: DDMMSS → 6 digits, lat DMm: DDMM → 4 digits
-  //   lon DMS: DDDMMSS → 7 digits, lon DMm: DDDMM → 5 digits
-  // Longitude hemispheres (E, W, V) use 3-digit degrees, latitude (N, S) use 2-digit
   const isLon = (hem === "E" || hem === "W" || hem === "V")
   const degLen = isLon ? 3 : 2
 
@@ -141,11 +131,9 @@ function parseDMorDMS(raw, hem) {
 
   let decDeg
   if (remainder.length <= 2) {
-    // DMm format: remaining digits are MM, fraction belongs to minutes
     const minutes = parseFloat(remainder + fracPart)
     decDeg = deg + minutes / 60
   } else {
-    // DMS format: remaining digits are MMSS, fraction belongs to seconds
     const mm = parseInt(remainder.substring(0, 2), 10)
     const ss = parseFloat(remainder.substring(2) + fracPart)
     decDeg = deg + mm / 60 + ss / 3600
@@ -309,7 +297,7 @@ document.getElementById("destination").addEventListener("input", function () {
   }, 400)
 })
 
-// Coordinate input field — live validation feedback
+// Coordinate input — live validation feedback
 document.getElementById("coordInput").addEventListener("input", function () {
   const val = this.value.trim()
   const feedback = document.getElementById("coordFeedback")
@@ -330,26 +318,24 @@ document.getElementById("coordInput").addEventListener("input", function () {
   }
 })
 
-function calculateCoords() {
-  const val = document.getElementById("coordInput").value.trim()
-  if (!val) return
-
-  const parsed = parseCoords(val)
-  if (!parsed) {
-    alert("Format coordonate nerecunoscut.\n\nFormate acceptate:\n• 46.5424, 24.5574\n• N4632.547 E02433.448\n• N463232.8 E0243320.9")
-    return
-  }
-
-  const departure = document.getElementById("departure").value
-  start = cities[departure]
-  const label = formatCoordResult(parsed.lat, parsed.lng, parsed.format)
-  resolveRoute([parsed.lat, parsed.lng], label, departure)
-}
-
 async function calculate() {
   const departure = document.getElementById("departure").value
   start = cities[departure]
 
+  // Dacă e completat câmpul de coordonate, îl prioritizăm
+  const coordVal = document.getElementById("coordInput").value.trim()
+  if (coordVal) {
+    const parsed = parseCoords(coordVal)
+    if (!parsed) {
+      alert("Format coordonate nerecunoscut.\n\nFormate acceptate:\n• 46.5424, 24.5574\n• N4632.547 E02433.448\n• N463232.8 E0243320.9")
+      return
+    }
+    const label = formatCoordResult(parsed.lat, parsed.lng, parsed.format)
+    resolveRoute([parsed.lat, parsed.lng], label, departure)
+    return
+  }
+
+  // Altfel folosim câmpul de nume localitate
   const city = document.getElementById("destination").value.trim()
   if (!city) return
 
