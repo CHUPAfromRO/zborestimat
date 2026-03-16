@@ -7,39 +7,53 @@ body {
 
 h1 {
   text-align: center;
-  margin-top: 20px;
+  margin: 8px 0 0;
+  font-size: 19px;
 }
 
 .panel {
   background: white;
-  width: 500px;
-  margin: 20px auto;
-  padding: 20px;
+  width: 90%;
+  max-width: 800px;
+  margin: 6px auto;
+  padding: 8px 16px 10px;
   border-radius: 10px;
   box-shadow: 0 0 10px rgba(0,0,0,0.15);
 }
 
+.panel-columns {
+  display: flex;
+  gap: 20px;
+}
+
+.panel-col {
+  flex: 1;
+  min-width: 0;
+}
+
 label {
   display: block;
-  margin-top: 12px;
+  margin-top: 6px;
   font-weight: bold;
+  font-size: 13px;
 }
 
 select,
 input {
   width: 100%;
-  padding: 8px;
-  margin-top: 5px;
+  padding: 5px 8px;
+  margin-top: 3px;
   box-sizing: border-box;
   border: 1px solid #ccc;
   border-radius: 4px;
+  font-size: 13px;
 }
 
 button {
   width: 100%;
-  margin-top: 15px;
-  padding: 10px;
-  font-size: 16px;
+  margin-top: 8px;
+  padding: 7px;
+  font-size: 14px;
   cursor: pointer;
   background: #2c7be5;
   color: white;
@@ -52,13 +66,22 @@ button:hover {
 }
 
 .result {
-  margin-top: 20px;
-  font-size: 18px;
+  display: flex;
+  gap: 24px;
+  margin-top: 6px;
+  font-size: 14px;
+  padding-top: 6px;
+  border-top: 1px solid #eee;
+}
+
+.result p {
+  margin: 0;
 }
 
 #map {
-  height: 500px;
-  margin: 20px;
+  height: calc(100vh - 210px);
+  min-height: 420px;
+  margin: 0 20px 14px;
   border-radius: 10px;
 }
 
@@ -80,9 +103,9 @@ button:hover {
 }
 
 .suggestion-item {
-  padding: 8px 10px;
+  padding: 6px 10px;
   cursor: pointer;
-  font-size: 15px;
+  font-size: 13px;
 }
 
 .suggestion-item:hover {
@@ -93,24 +116,24 @@ button:hover {
 .nota {
   text-align: center;
   color: #888;
-  font-size: 13px;
-  margin: 10px 20px 20px;
+  font-size: 12px;
+  margin: 0 20px 12px;
 }
 
 /* ── Coordonate ── */
 
 #coordFeedback {
-  font-size: 12px;
-  margin-top: 4px;
-  min-height: 16px;
+  font-size: 11px;
+  margin-top: 3px;
+  min-height: 14px;
 }
 
 .help-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   background: #555;
   color: #fff;
   border-radius: 50%;
@@ -118,7 +141,7 @@ button:hover {
   font-weight: bold;
   cursor: pointer;
   position: relative;
-  margin-left: 6px;
+  margin-left: 5px;
   vertical-align: middle;
   user-select: none;
 }
@@ -126,13 +149,13 @@ button:hover {
 .help-tooltip {
   display: none;
   position: absolute;
-  left: 24px;
+  left: 22px;
   top: -8px;
   background: #1e1e2e;
   color: #e0e0e0;
   border: 1px solid #444;
   border-radius: 8px;
-  padding: 12px 14px;
+  padding: 10px 14px;
   font-size: 12px;
   font-weight: normal;
   line-height: 1.7;
@@ -160,3 +183,32 @@ button:hover {
 .help-icon.active .help-tooltip {
   display: block;
 }
+
+/* ── Responsive: telefon ── */
+@media (max-width: 600px) {
+  .panel {
+    width: 95%;
+    padding: 8px 12px 10px;
+  }
+
+  .panel-columns {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  h1 {
+    font-size: 16px;
+  }
+
+  #map {
+    height: 55vh;
+    min-height: 300px;
+    margin: 0 10px 10px;
+  }
+
+  .result {
+    flex-direction: column;
+    gap: 2px;
+  }
+}
+
