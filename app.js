@@ -1,11 +1,17 @@
 const speed = 100
 
-const cities = {
+// Sugestii afișate la focus pe câmpul de plecare (când e gol)
+const suggestedDepartures = {
   "Târgu Mureș": [46.54245, 24.55747],
-  "Jibou": [47.255, 23.257],
+  "Brașov": [45.6579, 25.6012],
   "Caransebeș": [45.4167, 22.2167],
+  "Jibou": [47.255, 23.257],
   "Arad": [46.1866, 21.3123],
-  "Brașov": [45.6579, 25.6012]
+  "București": [44.4268, 26.1025],
+  "Craiova": [44.3302, 23.7949],
+  "Galați": [45.4353, 28.0080],
+  "Iași": [47.1585, 27.6014],
+  "Constanța": [44.1598, 28.6348]
 }
 
 const countyAbbr = {
@@ -24,12 +30,18 @@ const countyAbbr = {
 
 const allowedTypes = ["city", "town", "village", "hamlet", "suburb", "quarter", "neighbourhood", "municipality"]
 
-let start = cities["Târgu Mureș"]
+// ── Stare globală ──────────────────────────────────────────────────────────
+let start = suggestedDepartures["Târgu Mureș"]
+let startName = "Târgu Mureș"
+let currentDest = null
+let currentDestName = ""
 let route
+let startMarker
 let destMarker
 let selectedDest = null
 let selectedName = ""
 let searchTimeout = null
+let depSearchTimeout = null
 
 const fetchOpts = {
   headers: {
@@ -45,6 +57,17 @@ L.tileLayer(
   { attribution: '© OpenStreetMap' }
 ).addTo(map)
 
+// Icon verde pentru plecare
+const greenIcon = L.icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+})
+
+// ── Utilitare coordonate ──────────────────────────────────────────────────
 function toDMS(deg, isLat) {
   const d = Math.floor(Math.abs(deg))
   const mFull = (Math.abs(deg) - d) * 60
@@ -86,7 +109,6 @@ function buildPopup(latDMS, lngDMS, altText) {
 function parseCoords(raw) {
   const s = raw.trim().toUpperCase()
 
-  // Format 1: two decimal numbers separated by comma or space
   const decRe = /^(-?\d{1,3}(?:\.\d+)?)[,\s]+(-?\d{1,3}(?:\.\d+)?)$/
   const decMatch = s.match(decRe)
   if (decMatch) {
@@ -95,7 +117,6 @@ function parseCoords(raw) {
     if (isValidLatLng(lat, lng)) return { lat, lng, format: "DD" }
   }
 
-  // Format 2 & 3: N/S + digits + E/W/V + digits
   const coordRe = /^([NS])(\d+(?:\.\d+)?)\s+([EWV])(\d+(?:\.\d+)?)$/
   const coordMatch = s.match(coordRe)
   if (coordMatch) {
@@ -126,16 +147,18 @@ function parseDMorDMS(raw, hem) {
   const isLon = (hem === "E" || hem === "W" || hem === "V")
   const degLen = isLon ? 3 : 2
 
+  if (intPart.length < degLen) return null
+
   const deg = parseInt(intPart.substring(0, degLen), 10)
   const remainder = intPart.substring(degLen)
 
   let decDeg
   if (remainder.length <= 2) {
-    const minutes = parseFloat(remainder + fracPart)
+    const minutes = parseFloat(remainder + fracPart) || 0
     decDeg = deg + minutes / 60
   } else {
     const mm = parseInt(remainder.substring(0, 2), 10)
-    const ss = parseFloat(remainder.substring(2) + fracPart)
+    const ss = parseFloat(remainder.substring(2) + fracPart) || 0
     decDeg = deg + mm / 60 + ss / 3600
   }
 
@@ -144,7 +167,8 @@ function parseDMorDMS(raw, hem) {
 }
 
 function isValidLatLng(lat, lng) {
-  return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
+  return isFinite(lat) && isFinite(lng) &&
+    lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
 }
 
 function formatCoordResult(lat, lng, format) {
@@ -157,36 +181,7 @@ function formatCoordResult(lat, lng, format) {
   return `${latDMS.dir}${latDMS.dms} ${lngDMS.dir}${lngDMS.dms}`
 }
 
-// ---------------------------------------------------------------------------
-
-map.on("click", async function (e) {
-  const lat = e.latlng.lat
-  const lng = e.latlng.lng
-  const newDest = [lat, lng]
-
-  const latDMS = toDMS(lat, true)
-  const lngDMS = toDMS(lng, false)
-
-  const popup = L.popup()
-    .setLatLng(e.latlng)
-    .setContent(buildPopup(latDMS, lngDMS, "Se încarcă..."))
-    .openOn(map)
-
-  try {
-    const res = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lng}`)
-    const data = await res.json()
-    const meters = data.results[0].elevation
-    const feet = (meters * 3.28084).toFixed(0)
-    popup.setContent(buildPopup(latDMS, lngDMS, `${feet} ft`))
-  } catch {
-    popup.setContent(buildPopup(latDMS, lngDMS, "Indisponibil"))
-  }
-
-  const departure = document.getElementById("departure").value
-  start = cities[departure]
-  resolveRoute(newDest, `${lat.toFixed(4)}, ${lng.toFixed(4)}`, departure)
-})
-
+// ── Distanțe ───────────────────────────────────────────────────────────────
 function haversine(lat1, lon1, lat2, lon2) {
   const R = 6371
   const toRad = x => x * Math.PI / 180
@@ -211,6 +206,7 @@ function routeDistance(points) {
   return dist
 }
 
+// ── Nominatim helpers ──────────────────────────────────────────────────────
 function getCountyCode(item) {
   const county = item.address?.county
     ?.replace(/\s*Județ\s*/i, "")
@@ -234,6 +230,179 @@ function filterAndSort(data) {
     })
 }
 
+function dedupeResults(filtered) {
+  const seen = new Set()
+  return filtered.filter(item => {
+    const code = getCountyCode(item)
+    const name = getLocalityName(item)
+    const key = `${name.toLowerCase()}-${code}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+async function searchNominatim(query) {
+  const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&countrycodes=ro&q=${encodeURIComponent(query)}`
+  const res = await fetch(url, fetchOpts)
+  const data = await res.json()
+  return dedupeResults(filterAndSort(data))
+}
+
+function renderSuggestions(container, items, onPick) {
+  container.innerHTML = ""
+
+  if (items.length === 0) {
+    const div = document.createElement("div")
+    div.className = "suggestion-item"
+    div.style.color = "#999"
+    div.textContent = "Nicio localitate găsită"
+    container.appendChild(div)
+    return
+  }
+
+  items.forEach(item => {
+    const div = document.createElement("div")
+    div.className = "suggestion-item"
+    div.textContent = item.label
+    div.onclick = () => {
+      container.innerHTML = ""
+      onPick(item)
+    }
+    container.appendChild(div)
+  })
+}
+
+// ── PLECARE ────────────────────────────────────────────────────────────────
+const depInput = document.getElementById("departureInput")
+const depSuggBox = document.getElementById("depSuggestions")
+depInput.value = startName
+
+function showDefaultDepartureSuggestions() {
+  const items = Object.entries(suggestedDepartures).map(([name, coords]) => ({
+    label: name,
+    coords,
+    name
+  }))
+  renderSuggestions(depSuggBox, items, item => {
+    depInput.value = item.name
+    setDeparture(item.coords, item.name)
+  })
+}
+
+function setDeparture(coords, name) {
+  start = coords
+  startName = name
+  updateStartMarker()
+  recalcIfPossible()
+}
+
+function updateStartMarker() {
+  if (startMarker) map.removeLayer(startMarker)
+  startMarker = L.marker(start, { draggable: true, icon: greenIcon })
+    .addTo(map)
+    .bindPopup(`Plecare: ${startName}`)
+
+  startMarker.on("drag", function () {
+    const pos = startMarker.getLatLng()
+    start = [pos.lat, pos.lng]
+    if (currentDest) {
+      const newDistance = routeDistance([start, currentDest])
+      const newTime = (newDistance / speed) * 60
+      document.getElementById("distance").innerText = newDistance.toFixed(1)
+      document.getElementById("time").innerText = newTime.toFixed(0)
+      if (route) map.removeLayer(route)
+      route = L.polyline([start, currentDest], { color: "red", weight: 4 }).addTo(map)
+    }
+  })
+
+  startMarker.on("dragend", function () {
+    const pos = startMarker.getLatLng()
+    start = [pos.lat, pos.lng]
+    startName = `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)}`
+    depInput.value = startName
+    startMarker.setPopupContent(`Plecare: ${startName}`)
+  })
+}
+
+function recalcIfPossible() {
+  if (currentDest) {
+    resolveRoute(currentDest, currentDestName)
+  }
+}
+
+depInput.addEventListener("focus", function () {
+  if (this.value.trim().length < 3) showDefaultDepartureSuggestions()
+})
+
+depInput.addEventListener("input", function () {
+  const q = this.value.trim()
+  clearTimeout(depSearchTimeout)
+
+  if (q.length < 3) {
+    showDefaultDepartureSuggestions()
+    return
+  }
+
+  depSearchTimeout = setTimeout(async () => {
+    try {
+      const unique = await searchNominatim(q)
+      const items = unique.map(item => {
+        const code = getCountyCode(item)
+        const name = getLocalityName(item)
+        return {
+          label: code ? `${name} (${code})` : name,
+          coords: [parseFloat(item.lat), parseFloat(item.lon)]
+        }
+      })
+      renderSuggestions(depSuggBox, items, picked => {
+        depInput.value = picked.label
+        setDeparture(picked.coords, picked.label)
+      })
+    } catch (e) {
+      console.error("Eroare căutare plecare:", e)
+    }
+  }, 400)
+})
+
+// Închide lista de sugestii la click în afara câmpului
+document.addEventListener("click", function (e) {
+  if (!e.target.closest("#departureInput") && !e.target.closest("#depSuggestions")) {
+    depSuggBox.innerHTML = ""
+  }
+  if (!e.target.closest("#destination") && !e.target.closest("#suggestions")) {
+    document.getElementById("suggestions").innerHTML = ""
+  }
+})
+
+// ── Click pe hartă = destinație ────────────────────────────────────────────
+map.on("click", async function (e) {
+  const lat = e.latlng.lat
+  const lng = e.latlng.lng
+  const newDest = [lat, lng]
+
+  const latDMS = toDMS(lat, true)
+  const lngDMS = toDMS(lng, false)
+
+  const popup = L.popup()
+    .setLatLng(e.latlng)
+    .setContent(buildPopup(latDMS, lngDMS, "Se încarcă..."))
+    .openOn(map)
+
+  try {
+    const res = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lng}`)
+    const data = await res.json()
+    const meters = data.results[0].elevation
+    const feet = (meters * 3.28084).toFixed(0)
+    popup.setContent(buildPopup(latDMS, lngDMS, `${feet} ft`))
+  } catch {
+    popup.setContent(buildPopup(latDMS, lngDMS, "Indisponibil"))
+  }
+
+  resolveRoute(newDest, `${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+})
+
+// ── DESTINAȚIE (căutare după nume) ─────────────────────────────────────────
 document.getElementById("destination").addEventListener("input", function () {
   const city = this.value.trim()
   const container = document.getElementById("suggestions")
@@ -248,48 +417,19 @@ document.getElementById("destination").addEventListener("input", function () {
   clearTimeout(searchTimeout)
   searchTimeout = setTimeout(async () => {
     try {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&countrycodes=ro&q=${encodeURIComponent(city)}`
-      const res = await fetch(url, fetchOpts)
-      const data = await res.json()
-
-      const filtered = filterAndSort(data)
-
-      const seen = new Set()
-      const unique = filtered.filter(item => {
+      const unique = await searchNominatim(city)
+      const items = unique.map(item => {
         const code = getCountyCode(item)
         const name = getLocalityName(item)
-        const key = `${name.toLowerCase()}-${code}`
-        if (seen.has(key)) return false
-        seen.add(key)
-        return true
-      })
-
-      container.innerHTML = ""
-
-      if (unique.length === 0) {
-        const div = document.createElement("div")
-        div.className = "suggestion-item"
-        div.style.color = "#999"
-        div.textContent = "Nicio localitate găsită"
-        container.appendChild(div)
-        return
-      }
-
-      unique.forEach(item => {
-        const code = getCountyCode(item)
-        const name = getLocalityName(item)
-        const locationName = code ? `${name} (${code})` : name
-
-        const div = document.createElement("div")
-        div.className = "suggestion-item"
-        div.textContent = locationName
-        div.onclick = () => {
-          document.getElementById("destination").value = locationName
-          container.innerHTML = ""
-          selectedDest = [parseFloat(item.lat), parseFloat(item.lon)]
-          selectedName = locationName
+        return {
+          label: code ? `${name} (${code})` : name,
+          coords: [parseFloat(item.lat), parseFloat(item.lon)]
         }
-        container.appendChild(div)
+      })
+      renderSuggestions(container, items, picked => {
+        document.getElementById("destination").value = picked.label
+        selectedDest = picked.coords
+        selectedName = picked.label
       })
     } catch (e) {
       console.error("Eroare căutare:", e)
@@ -297,7 +437,7 @@ document.getElementById("destination").addEventListener("input", function () {
   }, 400)
 })
 
-// Coordinate input — live validation feedback
+// ── Coordonate — feedback live ─────────────────────────────────────────────
 document.getElementById("coordInput").addEventListener("input", function () {
   const val = this.value.trim()
   const feedback = document.getElementById("coordFeedback")
@@ -318,10 +458,8 @@ document.getElementById("coordInput").addEventListener("input", function () {
   }
 })
 
+// ── Calculează ─────────────────────────────────────────────────────────────
 async function calculate() {
-  const departure = document.getElementById("departure").value
-  start = cities[departure]
-
   // Dacă e completat câmpul de coordonate, îl prioritizăm
   const coordVal = document.getElementById("coordInput").value.trim()
   if (coordVal) {
@@ -331,7 +469,7 @@ async function calculate() {
       return
     }
     const label = formatCoordResult(parsed.lat, parsed.lng, parsed.format)
-    resolveRoute([parsed.lat, parsed.lng], label, departure)
+    resolveRoute([parsed.lat, parsed.lng], label)
     return
   }
 
@@ -340,21 +478,17 @@ async function calculate() {
   if (!city) return
 
   if (city.toLowerCase().includes("bucure")) {
-    resolveRoute([44.4268, 26.1025], "București (B)", departure)
+    resolveRoute([44.4268, 26.1025], "București (B)")
     return
   }
 
   if (selectedDest) {
-    resolveRoute(selectedDest, selectedName, departure)
+    resolveRoute(selectedDest, selectedName)
     return
   }
 
   try {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=15&countrycodes=ro&q=${encodeURIComponent(city)}`
-    const res = await fetch(url, fetchOpts)
-    const data = await res.json()
-
-    const filtered = filterAndSort(data)
+    const filtered = await searchNominatim(city)
 
     if (filtered.length === 0) {
       alert("Localitate negăsită. Selectați din lista de sugestii.")
@@ -366,13 +500,17 @@ async function calculate() {
     const name = getLocalityName(best)
     const locationName = code ? `${name} (${code})` : name
     const dest = [parseFloat(best.lat), parseFloat(best.lon)]
-    resolveRoute(dest, locationName, departure)
+    resolveRoute(dest, locationName)
   } catch (e) {
     alert("Eroare la căutare")
   }
 }
 
-function resolveRoute(dest, locationName, departure) {
+// ── Trasare rută ───────────────────────────────────────────────────────────
+function resolveRoute(dest, locationName) {
+  currentDest = dest
+  currentDestName = locationName
+
   const points = [start, dest]
   const distance = routeDistance(points)
   const time = (distance / speed) * 60
@@ -388,6 +526,7 @@ function resolveRoute(dest, locationName, departure) {
   destMarker.on("drag", function () {
     const pos = destMarker.getLatLng()
     const newDest = [pos.lat, pos.lng]
+    currentDest = newDest
 
     const newDistance = routeDistance([start, newDest])
     const newTime = (newDistance / speed) * 60
@@ -401,10 +540,20 @@ function resolveRoute(dest, locationName, departure) {
 
   destMarker.on("dragend", function () {
     const pos = destMarker.getLatLng()
+    const label = `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)}`
     selectedDest = [pos.lat, pos.lng]
-    document.getElementById("destination").value = `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)}`
+    selectedName = label
+    currentDest = selectedDest
+    currentDestName = label
+    document.getElementById("destination").value = label
+    destMarker.setPopupContent(label)
   })
 
   route = L.polyline(points, { color: "red", weight: 4 }).addTo(map)
-  map.fitBounds(route.getBounds())
+  map.fitBounds(route.getBounds(), { padding: [30, 30] })
+
+  updateStartMarker()
 }
+
+// ── Inițializare ───────────────────────────────────────────────────────────
+updateStartMarker()

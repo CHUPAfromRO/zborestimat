@@ -15,18 +15,15 @@
 
     <!-- Coloana stânga: plecare + destinație nume -->
     <div class="panel-col">
-      <label>Plecare</label>
-      <select id="departure">
-        <option>Târgu Mureș</option>
-        <option>Jibou</option>
-        <option>Caransebeș</option>
-        <option>Arad</option>
-        <option>Brașov</option>
-      </select>
+      <label>Plecare (nume localitate)</label>
+      <div class="input-wrapper">
+        <input id="departureInput" placeholder="Ex: Târgu Mureș" autocomplete="off">
+        <div id="depSuggestions"></div>
+      </div>
 
       <label>Destinație (nume localitate)</label>
       <div class="input-wrapper">
-        <input id="destination" placeholder="Ex: Târgu Mureș">
+        <input id="destination" placeholder="Ex: Târgu Mureș" autocomplete="off">
         <div id="suggestions"></div>
       </div>
     </div>
